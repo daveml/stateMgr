@@ -9,19 +9,19 @@ rsbOut ={rs_general=1,send_derailer=2,sys_test=4,unload=8,sw_cartpark=16,lime=32
 		 rs_rails=2048,sensor_reset=4096,sys_running=8192,sw_mine=16384, sys_stop=32768}
 
 
-function Idle_F(EventT)
-	print("Idle_F")
-end
-	
-function Running_F()
-	print("Running")
-end
-	
 local _Event_t = {name="", p1="", p2="", p3="", p4=""}
 
-local deferHandlers = {
+function nilHandleF()
+	print("nil handler")
+end
+
+local __IDLE = 1
+local __RUNNING = 2
+
+local deferHandlers = {}
+deferHandlers[__IDLE] = 
 			{name = "Idle", 
-				handlerF = Idle_F,
+				handlerF = nilHandleF,
 				self = -1,
 				events={"timer"},
 				mask1=rsbIn.sys_test+rsbIn.sys_on, 
@@ -30,9 +30,10 @@ local deferHandlers = {
 				mask4=0,
 				mask5=0, 
 				mask6=0
-			},
+			}
+deferHandlers[__RUNNING] = 
 			{name = "Running", 
-				handlerF = Running_F,
+				handlerF = nilHandleF,
 				self = -1,
 				events={"redstone"},
 				mask1=rsbIn.sys_test+rsbIn.sys_on, 
@@ -41,8 +42,31 @@ local deferHandlers = {
 				mask4=0,
 				mask5=0, 
 				mask6=0
-			},
-		}
+			}
+
+function deferHandle.EventClearEvent(NewEventT, MaskEventsT)
+	for TIdx, newevent in pairs(NewEventT) do
+		dPrint(TIdx..":"..newevent)
+		for Idx, event in pairs(MaskEvents) do
+			dPrint(Idx..":"..event)
+			if event == newevent then
+				table.remove(EventT, TIdx)
+				return event
+			end
+		end
+	end
+	return nil
+end
+
+deferHandlers[__IDLE].handlerF = function (Hdl, EventT)
+	event = deferHandle.EventClearEvent(EventT, Hdl.events)
+	print("Idle_F")
+end
+
+deferHandlers[__RUNNING].handlerF = function (Hdl, EventT)
+	print("Running")
+end
+	
 
 deferHandle = {} 
 
@@ -98,12 +122,11 @@ function deferHandle.handle(Hdl, EventT)
 	for Idx, newevent in pairs(EventT) do
 		for Idx, Handler in ipairs(Hdl) do
 			dPrint("Checking"..Handler.name)
-			for Idx=1, table.getn(Handler.events) do
-				local event = Handler.events[Idx]
+			for Idx, event in pairs(Handler.events) do
 				dPrint(event..":"..newevent)
 				if event == newevent then
 					dPrint("Matched event: "..event.." for handler: "..Handler.name)
-					Handler.handlerF(EventT)
+					Handler.handlerF(Handler, EventT)
 				end
 			end
 		end
@@ -119,6 +142,7 @@ function Main()
 	
 	local eventT = {"timer"}
 	
+	deferHandle.handle(dH, eventT)
 	deferHandle.handle(dH, eventT)
 
 end
