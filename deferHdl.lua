@@ -11,6 +11,9 @@ rsbOut ={rs_general=1,send_derailer=2,sys_test=4,unload=8,sw_cartpark=16,lime=32
 
 local _Event_t = {name="", p1="", p2="", p3="", p4=""}
 
+local __Timer = "timer"
+local __Redstone = "redstone"
+
 function nilHandleF()
 	print("nil handler")
 end
@@ -23,7 +26,7 @@ deferHandlers[__IDLE] =
 			{name = "Idle", 
 				handlerF = nilHandleF,
 				self = -1,
-				events={"timer"},
+				events={__Timer},
 				mask1=rsbIn.sys_test+rsbIn.sys_on, 
 				mask2=65535-rsbOut.send_miner-rsbOut.send_derailer,
 				mask3=0,
@@ -35,7 +38,7 @@ deferHandlers[__RUNNING] =
 			{name = "Running", 
 				handlerF = nilHandleF,
 				self = -1,
-				events={"redstone"},
+				events={__Redstone},
 				mask1=rsbIn.sys_test+rsbIn.sys_on, 
 				mask2=65535-rsbOut.send_miner-rsbOut.send_derailer,
 				mask3=0,
@@ -44,27 +47,16 @@ deferHandlers[__RUNNING] =
 				mask6=0
 			}
 
-function deferHandle.EventClearEvent(NewEventT, MaskEventsT)
-	for TIdx, newevent in pairs(NewEventT) do
-		dPrint(TIdx..":"..newevent)
-		for Idx, event in pairs(MaskEvents) do
-			dPrint(Idx..":"..event)
-			if event == newevent then
-				table.remove(EventT, TIdx)
-				return event
-			end
-		end
-	end
-	return nil
-end
-
 deferHandlers[__IDLE].handlerF = function (Hdl, EventT)
 	event = deferHandle.EventClearEvent(EventT, Hdl.events)
 	print("Idle_F")
+	print("Handling event:"..event)
 end
 
 deferHandlers[__RUNNING].handlerF = function (Hdl, EventT)
+	event = deferHandle.EventClearEvent(EventT, Hdl.events)
 	print("Running")
+	print("Handling event:"..event)
 end
 	
 
@@ -74,42 +66,12 @@ function deferHandle.init()
 	return {}
 end
 
-function deferHandle.pushleft (list, value)
-    local first = list.first - 1
-    list.first = first
-	list[first] = value
-end
-    
-function deferHandle.pushright (list, value)
-    local last = list.last + 1
-    list.last = last
-	list[last] = value
-end
-    
-function deferHandle.popleft (list)
-    local first = list.first
-    if first > list.last then return nil end
-    local value = list[first]
-    list[first] = nil        -- to allow garbage collection
-    list.first = first + 1
-	return value
-end
-    
-function deferHandle.popright (list)
-    local last = list.last
-    if list.first > last then return nil end
-    local value = list[last]
-    list[last] = nil         -- to allow garbage collection
-    list.last = last - 1
-	return value
-end
-	
 function deferHandle.add(Hdl, Handler)
 	table.insert(Hdl, Handler)
 	Handler.self = # Hdl
 end
 
-function deferHandleRemove(Hdl, Handler)
+function deferHandle.remove(Hdl, Handler)
 	table.remove(Hdl, Handler.self)
 end
 
@@ -118,33 +80,70 @@ function dPrint(str)
 end
 
 function deferHandle.handle(Hdl, EventT)
-	dPrint("deferHandler running...")
-	for Idx, newevent in pairs(EventT) do
-		for Idx, Handler in ipairs(Hdl) do
-			dPrint("Checking"..Handler.name)
-			for Idx, event in pairs(Handler.events) do
-				dPrint(event..":"..newevent)
-				if event == newevent then
-					dPrint("Matched event: "..event.." for handler: "..Handler.name)
-					Handler.handlerF(Handler, EventT)
+	dPrint("deferHandler running...sz="..#EventT)
+	local EvTSz = 0
+	local HandleComplete = false
+	local HandlingEvents = true
+	
+	while HandlingEvents do
+		for Idx, newevent in ipairs(EventT) do
+			if HandleComplete then break end
+			for HdlIdx, Handler in ipairs(Hdl) do
+				if HandleComplete then break end
+				dPrint("Checking"..Handler.name)
+				for EvIdx, event in pairs(Handler.events) do
+					dPrint(event..":"..newevent)
+					if event == newevent then
+						dPrint("Matched event: "..event.." for handler: "..Handler.name)
+						Handler.handlerF(Handler, EventT)
+						HandleComplete = true
+						break
+					end
 				end
 			end
 		end
+		if HandleComplete then
+			HandleComplete = false
+		else
+			HandlingEvents = false
+		end
 	end
+	
+end
+
+function deferHandle.EventClearEvent(NewEventT, MaskEventsT)
+	for TIdx, newevent in pairs(NewEventT) do
+		dPrint(TIdx..":"..newevent)
+		for Idx, event in pairs(MaskEventsT) do
+			dPrint(Idx..":"..event)
+			if event == newevent then
+				table.remove(NewEventT, TIdx)
+				return event
+			end
+		end
+	end
+	return nil
 end
 
 
 function Main()
 	print("deferhandle test")
 	local dH = deferHandle.init()
-	deferHandle.add(dH, deferHandlers[1])
-	deferHandle.add(dH, deferHandlers[2])
 	
-	local eventT = {"timer"}
+	for Idx, Handler in ipairs(deferHandlers) do
+		deferHandle.add(dH, deferHandlers[Idx])
+	end
+	--deferHandle.add(dH, deferHandlers[__RUNNING])
+	
+	local eventT = {__Timer, __Redstone}
 	
 	deferHandle.handle(dH, eventT)
 	deferHandle.handle(dH, eventT)
-
+	deferHandle.handle(dH, eventT)
+	eventT = {__Timer, __Redstone}
+	deferHandle.handle(dH, eventT)
+	deferHandle.handle(dH, eventT)
+	
 end
 
 Main()
