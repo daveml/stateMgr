@@ -9,16 +9,21 @@ rsbOut ={rs_general=1,send_derailer=2,sys_test=4,unload=8,sw_cartpark=16,lime=32
 		 rs_rails=2048,sensor_reset=4096,sys_running=8192,sw_mine=16384, sys_stop=32768}
 
 
-local Idle_F
-local Running_F
-
+function Idle_F(EventT)
+	print("Idle_F")
+end
+	
+function Running_F()
+	print("Running")
+end
+	
 local _Event_t = {name="", p1="", p2="", p3="", p4=""}
 
-local deferHandles = {
+local deferHandlers = {
 			{name = "Idle", 
 				handlerF = Idle_F,
 				self = -1,
-				events={timer},
+				events={"timer"},
 				mask1=rsbIn.sys_test+rsbIn.sys_on, 
 				mask2=65535-rsbOut.send_miner-rsbOut.send_derailer,
 				mask3=0,
@@ -29,7 +34,7 @@ local deferHandles = {
 			{name = "Running", 
 				handlerF = Running_F,
 				self = -1,
-				events={timer},
+				events={"redstone"},
 				mask1=rsbIn.sys_test+rsbIn.sys_on, 
 				mask2=65535-rsbOut.send_miner-rsbOut.send_derailer,
 				mask3=0,
@@ -42,7 +47,7 @@ local deferHandles = {
 deferHandle = {} 
 
 function deferHandle.init()
-	return {first = 0, last = -1}
+	return {}
 end
 
 function deferHandle.pushleft (list, value)
@@ -76,15 +81,46 @@ function deferHandle.popright (list)
 end
 	
 function deferHandle.add(Hdl, Handler)
-	deferHandle.pushright(Hdl, Handler)
-	Handler.self = Hdl.last
+	table.insert(Hdl, Handler)
+	Handler.self = # Hdl
 end
 
-function deferHandleRemove(DeferHandle, Handler)
-	table.remove(DeferHandle, Handler.self)
+function deferHandleRemove(Hdl, Handler)
+	table.remove(Hdl, Handler.self)
 end
 
-function deferHandlerHandle(DeferHandle, EventT)
+function dPrint(str)
+	print(str)
+end
+
+function deferHandle.handle(Hdl, EventT)
+	dPrint("deferHandler running...")
+	for Idx, newevent in pairs(EventT) do
+		for Idx, Handler in ipairs(Hdl) do
+			dPrint("Checking"..Handler.name)
+			for Idx=1, table.getn(Handler.events) do
+				local event = Handler.events[Idx]
+				dPrint(event..":"..newevent)
+				if event == newevent then
+					dPrint("Matched event: "..event.." for handler: "..Handler.name)
+					Handler.handlerF(EventT)
+				end
+			end
+		end
+	end
+end
+
+
+function Main()
+	print("deferhandle test")
+	local dH = deferHandle.init()
+	deferHandle.add(dH, deferHandlers[1])
+	deferHandle.add(dH, deferHandlers[2])
 	
+	local eventT = {"timer"}
+	
+	deferHandle.handle(dH, eventT)
 
 end
+
+Main()
