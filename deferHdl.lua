@@ -48,21 +48,25 @@ deferHandlers[__RUNNING] =
 			}
 
 deferHandlers[__IDLE].handlerF = function (Hdl, EventT)
-	event = deferHandle.EventClearEvent(EventT, Hdl.events)
+	deferHandle.clearevent(EventT)
 	print("Idle_F")
-	print("Handling event:"..event)
+	print("Handling event:"..EventT.name)
 end
 
 deferHandlers[__RUNNING].handlerF = function (Hdl, EventT)
-	event = deferHandle.EventClearEvent(EventT, Hdl.events)
+	deferHandle.clearevent(EventT)
 	print("Running")
-	print("Handling event:"..event)
+	print("Handling event:"..EventT.name)
 end
 	
 deferHandle = {} 
 
 function deferHandle.init()
 	return {}
+end
+
+function deferHandle.newevent(EvName,EvP1,EvP2,EvP3,EvP4)
+	return {name=EvName,active=true,p1=EvP1,p2=EvP2,p3=EvP3,p4=EvP4}
 end
 
 function deferHandle.add(Hdl, Handler)
@@ -79,51 +83,29 @@ function dPrint(str)
 end
 
 function deferHandle.handle(Hdl, EventT)
-	dPrint("deferHandler running...sz="..#EventT)
-	local EvTSz = 0
+	dPrint("deferHandler running on Event..."..EventT.name)
 	local HandleComplete = false
-	local HandlingEvents = true
-	
-	while HandlingEvents do
-		for Idx, newevent in ipairs(EventT) do
-			if HandleComplete then break end
-			for HdlIdx, Handler in ipairs(Hdl) do
-				if HandleComplete then break end
-				dPrint("Checking"..Handler.name)
-				for EvIdx, event in pairs(Handler.events) do
-					dPrint(event..":"..newevent)
-					if event == newevent then
-						dPrint("Matched event: "..event.." for handler: "..Handler.name)
-						Handler.handlerF(Handler, EventT)
-						HandleComplete = true
-						break
-					end
-				end
-			end
-		end
-		if HandleComplete then
-			HandleComplete = false
-		else
-			HandlingEvents = false
-		end
-	end
-	
-end
+		
+	newevent = EventT.name
 
-function deferHandle.EventClearEvent(NewEventT, MaskEventsT)
-	for TIdx, newevent in pairs(NewEventT) do
-		dPrint(TIdx..":"..newevent)
-		for Idx, event in pairs(MaskEventsT) do
-			dPrint(Idx..":"..event)
+	for HdlIdx, Handler in ipairs(Hdl) do
+		if HandleComplete then break end
+		dPrint("Checking"..Handler.name)
+		for EvIdx, event in pairs(Handler.events) do
+			dPrint(event..":"..newevent)
 			if event == newevent then
-				table.remove(NewEventT, TIdx)
-				return event
+				dPrint("Matched event: "..event.." for handler: "..Handler.name)
+				Handler.handlerF(Handler, EventT)
+				HandleComplete = true
+				break
 			end
 		end
 	end
-	return nil
 end
 
+function deferHandle.clearevent(EventT)
+	EventT.active = false
+end
 
 function Main()
 	print("deferhandle test")
@@ -134,14 +116,13 @@ function Main()
 	end
 	--deferHandle.add(dH, deferHandlers[__RUNNING])
 	
-	local eventT = {__Timer, __Redstone}
 	
-	deferHandle.handle(dH, eventT)
-	deferHandle.handle(dH, eventT)
-	deferHandle.handle(dH, eventT)
-	eventT = {__Timer, __Redstone}
-	deferHandle.handle(dH, eventT)
-	deferHandle.handle(dH, eventT)
+	deferHandle.handle(dH, deferHandle.newevent(__Timer))
+	deferHandle.handle(dH, deferHandle.newevent(__Redstone))
+	deferHandle.handle(dH, deferHandle.newevent(__Timer))
+
+	deferHandle.handle(dH, deferHandle.newevent(__Timer))
+	deferHandle.handle(dH, deferHandle.newevent(__Timer))
 	
 end
 
