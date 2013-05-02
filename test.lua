@@ -28,32 +28,48 @@ local __Rednet = "rednet_message"
 --local __RUNNING = 2
 --local __STATE1 = 3
 
+local rsbStat = {}
+rsbStat["left"] = {lastStatus=0}
+rsbStat["right"] = {lastStatus=0}
+rsbStat["top"] = {lastStatus=0}
+rsbStat["back"] = {lastStatus=0}
+rsbStat["bottom"] = {lastStatus=0}
+rsbStat["front"] = {lastStatus=0}
+
 local deferHandlers = {}
 deferHandlers.Idle = 
 			{name = "Idle", 
 				handlerF = nil,
 				selfIdx = -1,
 				events={__Timer, __Char},
-				masks={{en=false,param="left",mask=nil}, 
-					   {en=false,param="right",mask=nil},
-				       {en=false,param="top",mask=nil},
-				  	   {en=false,param="back",mask=nil},
-				       {en=false,param="bottom",mask=nil},
-				       {en=false,param="front",mask=nil}}
+				masks={{en=false,param="left",status=nil, mask=nil}, 
+					   {en=false,param="right",status=nil, mask=nil},
+				       {en=false,param="top",status=nil, mask=nil},
+				  	   {en=false,param="back",status=nil, mask=nil},
+				       {en=false,param="bottom",status=nil, mask=nil},
+				       {en=false,param="front",status=nil, mask=nil}}
 			}
 deferHandlers.Running = 
 			{name = "Running", 
 				handlerF = nil,
 				selfIdx = -1,
 				events={__Redstone},
-				masks={{en=true,param="left",mask=rsbIn.sys_on}}
+				masks={{en=true,param="left",status=nil, mask=rsbIn.sys_on}}
 			}
 deferHandlers.State1 = 
 			{name = "State1", 
 				handlerF = nil,
 				selfIdx = -1,
 				events={__Redstone},
-				masks={{en=true,param="left",mask=rsbIn.arrival}}
+				masks={{en=true,param="left",status=nil, mask=rsbIn.sys_on}}
+			}
+
+deferHandlers.State2 = 
+			{name = "State2", 
+				handlerF = nil,
+				selfIdx = -1,
+				events={__Redstone},
+				masks={{en=true,param="left",status=nil, mask=rsbIn.sys_on}}
 			}
 
 deferHandlers.Idle.handlerF = function (dH, Handler, EventT)
@@ -71,11 +87,40 @@ end
 deferHandlers.State1.handlerF = function (dH, Handler, EventT)
 	deferHandle.clearevent(EventT)
 	print(Handler.name.." Handling event:"..EventT.name..EventT.p1..EventT.p2)
+	deferHandle.remove(dH, Handler)
+	deferHandle.add(dH, deferHandlers.State2)
 end
 
-function Test_MaskHandleF(param)
-	print("Mask handleF: "..param)
-	return rsbIn.sys_on
+deferHandlers.State2.handlerF = function (dH, Handler, EventT)
+	deferHandle.clearevent(EventT)
+	print(Handler.name.." Handling event:"..EventT.name..EventT.p1..EventT.p2)
+end
+
+function rsbStatusInit(deferHandlers)
+	-- init all the masks to hold the proper status table
+	for name,Handler in pairs(deferHandlers) do
+		for MaskIdx, mask in ipairs(Handler.masks) do
+			mask.status = rsbStat[mask.param]
+		end
+	end
+end
+
+local RsbInputVal=0
+
+function rsbGetInput()
+	return RsbInputVal
+end
+
+function Test_MaskHandleF(maskE)
+	print("Mask handleF: "..maskE.param)
+
+	local newstatus = rsbGetInput(maskE.param)
+	local oldstatus = maskE.status.lastStatus
+	print(newstatus..":"..oldstatus)
+	local chgstatus = bit.bxor(newstatus,oldstatus)
+	local maskcheck = bit.band(chgstatus, maskE.mask)
+	maskE.status.lastStatus = newstatus
+	return maskcheck ~= 0
 end
 
 function Main()
@@ -83,16 +128,20 @@ function Main()
 	local dH = deferHandle.init()
 	
 	deferHandle.setMaskHandler(dH, Test_MaskHandleF, __Redstone)
+	rsbStatusInit(deferHandlers)
 	
 	deferHandle.add(dH, deferHandlers.Idle)
 	deferHandle.add(dH, deferHandlers.Running)
 	
+	RsbInputVal = rsbIn.sys_on
 	deferHandle.handle(dH, deferHandle.newevent(__Timer))
 	deferHandle.handle(dH, deferHandle.newevent(__Redstone,1,2))
 	deferHandle.handle(dH, deferHandle.newevent(__Timer))
 	deferHandle.handle(dH, deferHandle.newevent(__Redstone,1,2))
 	deferHandle.handle(dH, deferHandle.newevent(__Char))
 	deferHandle.handle(dH, deferHandle.newevent(__Rednet,1,2))
+	RsbInputVal = 0
+	deferHandle.handle(dH, deferHandle.newevent(__Redstone,1,2))
 
 	deferHandle.handle(dH, deferHandle.newevent(__Timer))
 	deferHandle.handle(dH, deferHandle.newevent(__Timer))

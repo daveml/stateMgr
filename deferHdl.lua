@@ -46,9 +46,7 @@ function M.handle(Hdl, EventT)
 			if event == newevent then
 				if Hdl.maskHandling and event == Hdl.maskEventType then
 					for MaskIdx, mask in ipairs(Handler.masks) do
-						if mask.en == false then break end
-						local status = Hdl.maskHandleF(mask.param)
-						if bit.band(status,mask.mask) ~= 0 then
+						if mask.en == true and Hdl.maskHandleF(mask) then
 							dPrint("Matched mask event: "..event.." for handler: "..Handler.name)
 							Handler.handlerF(Hdl, Handler, EventT)
 							return
