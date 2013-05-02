@@ -39,37 +39,29 @@ rsbStat["front"] = {lastStatus=0}
 local deferHandlers = {}
 deferHandlers.Idle = 
 			{name = "Idle", 
-				handlerF = nil,
-				selfIdx = -1,
 				events={__Timer, __Char},
-				masks={{en=false,param="left",status=nil, mask=nil}, 
-					   {en=false,param="right",status=nil, mask=nil},
-				       {en=false,param="top",status=nil, mask=nil},
-				  	   {en=false,param="back",status=nil, mask=nil},
-				       {en=false,param="bottom",status=nil, mask=nil},
-				       {en=false,param="front",status=nil, mask=nil}}
+				masks={{en=false,param="left",mask=nil}, 
+					   {en=false,param="right",mask=nil},
+				       {en=false,param="top",mask=nil},
+				  	   {en=false,param="back",mask=nil},
+				       {en=false,param="bottom",mask=nil},
+				       {en=false,param="front",mask=nil}}
 			}
 deferHandlers.Running = 
 			{name = "Running", 
-				handlerF = nil,
-				selfIdx = -1,
 				events={__Redstone},
-				masks={{en=true,param="left",status=nil, mask=rsbIn.sys_on}}
+				masks={{en=true,param="left",mask=rsbIn.sys_on}}
 			}
 deferHandlers.State1 = 
 			{name = "State1", 
-				handlerF = nil,
-				selfIdx = -1,
 				events={__Redstone},
-				masks={{en=true,param="left",status=nil, mask=rsbIn.sys_on}}
+				masks={{en=true,param="left",mask=rsbIn.sys_on}}
 			}
 
 deferHandlers.State2 = 
 			{name = "State2", 
-				handlerF = nil,
-				selfIdx = -1,
 				events={__Redstone},
-				masks={{en=true,param="left",status=nil, mask=rsbIn.sys_on}}
+				masks={{en=true,param="left",mask=rsbIn.sys_on}}
 			}
 
 deferHandlers.Idle.handlerF = function (dH, Handler, EventT)
