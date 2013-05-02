@@ -24,15 +24,15 @@ local __Redstone = "redstone"
 local __Char = "char"
 local __Rednet = "rednet_message"
 
-local __IDLE = 1
-local __RUNNING = 2
-local __STATE1 = 3
+--local __IDLE = 1
+--local __RUNNING = 2
+--local __STATE1 = 3
 
 local deferHandlers = {}
-deferHandlers[__IDLE] = 
+deferHandlers.Idle = 
 			{name = "Idle", 
-				handlerF = nilHandleF,
-				self = -1,
+				handlerF = nil,
+				selfIdx = -1,
 				events={__Timer, __Char},
 				masks={{en=false,param="left",mask=nil}, 
 					   {en=false,param="right",mask=nil},
@@ -41,34 +41,34 @@ deferHandlers[__IDLE] =
 				       {en=false,param="bottom",mask=nil},
 				       {en=false,param="front",mask=nil}}
 			}
-deferHandlers[__RUNNING] = 
+deferHandlers.Running = 
 			{name = "Running", 
-				handlerF = nilHandleF,
-				self = -1,
+				handlerF = nil,
+				selfIdx = -1,
 				events={__Redstone},
 				masks={{en=true,param="left",mask=rsbIn.sys_on}}
 			}
-deferHandlers[__STATE1] = 
+deferHandlers.State1 = 
 			{name = "State1", 
-				handlerF = nilHandleF,
-				self = -1,
+				handlerF = nil,
+				selfIdx = -1,
 				events={__Redstone},
 				masks={{en=true,param="left",mask=rsbIn.arrival}}
 			}
 
-deferHandlers[__IDLE].handlerF = function (dH, Handler, EventT)
+deferHandlers.Idle.handlerF = function (dH, Handler, EventT)
 	deferHandle.clearevent(EventT)
 	print(Handler.name.." Handling event:"..EventT.name)
 end
 
-deferHandlers[__RUNNING].handlerF = function (dH, Handler, EventT)
+deferHandlers.Running.handlerF = function (dH, Handler, EventT)
 	deferHandle.clearevent(EventT)
 	print(Handler.name.." Handling event:"..EventT.name..EventT.p1..EventT.p2)
 	deferHandle.remove(dH, Handler)
-	deferHandle.add(dH, deferHandlers[__STATE1])
+	deferHandle.add(dH, deferHandlers.State1)
 end
 
-deferHandlers[__STATE1].handlerF = function (dH, Handler, EventT)
+deferHandlers.State1.handlerF = function (dH, Handler, EventT)
 	deferHandle.clearevent(EventT)
 	print(Handler.name.." Handling event:"..EventT.name..EventT.p1..EventT.p2)
 end
@@ -84,8 +84,8 @@ function Main()
 	
 	deferHandle.setMaskHandler(dH, Test_MaskHandleF, __Redstone)
 	
-	deferHandle.add(dH, deferHandlers[__IDLE])
-	deferHandle.add(dH, deferHandlers[__RUNNING])
+	deferHandle.add(dH, deferHandlers.Idle)
+	deferHandle.add(dH, deferHandlers.Running)
 	
 	deferHandle.handle(dH, deferHandle.newevent(__Timer))
 	deferHandle.handle(dH, deferHandle.newevent(__Redstone,1,2))
@@ -100,3 +100,5 @@ function Main()
 end
 
 Main()
+
+return
